@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Internship Expenses</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+      transition: background-color 0.3s ease;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 450px;
+      transform: translateY(30px);
+      opacity: 0;
+      animation: fadeIn 0.8s forwards;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    h1 {
+      font-size: 2em;
+    }
+    label {
+      font-weight: bold;
+      color: #34495e;
+      margin-top: 15px;
+    }
+    input[type="date"], input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
+      border-color: #3498db;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1em;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 12px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+    .expenses-section {
+      margin-top: 30px;
+    }
+
+    /* Page transition animations */
+    @keyframes fadeIn {
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeInSummary {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* Button group styles */
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    .button-group button {
+      width: 48%;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        width: 100%;
+        padding: 15px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container" id="date-page">
+    <h1>Internship Expenses</h1>
+    <label for="expense-date">Select Date:</label>
+    <input type="date" id="expense-date" />
+
+    <button id="next-button">Next</button>
+  </div>
+
+  <div class="container" id="expenses-page" style="display: none;">
+    <h2>Today's Expenses (₹)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody id="expenses-table"></tbody>
+      <tfoot>
+        <tr>
+          <th>Total</th>
+          <th id="total-amount">0</th>
+        </tr>
+      </tfoot>
+    </table>
+
+    <label for="expense-item">Item/Purpose:</label>
+    <input type="text" id="expense-item" placeholder="Enter item/purpose" />
+
+    <label for="expense-amount">Amount (₹):</label>
+    <input type="number" id="expense-amount" placeholder="Enter amount" />
+
+    <div class="button-group">
+      <button id="add-expense">Enter</button>
+      <button id="view-total">Total</button>
+    </div>
+    
+    <div class="button-group">
+      <button id="view-total-expenses">View Total Expenses</button>
+      <button id="delete-data">Delete All Data</button>
+    </div>
+    
+    <button id="save-data">Save Data</button>
+
+    <div id="expenses-summary" style="margin-top: 15px; display: none; animation: fadeInSummary 1s;">
+    </div>
+  </div>
+
+  <script>
+    const nextButton = document.getElementById('next-button');
+    const datePage = document.getElementById('date-page');
+    const expensesPage = document.getElementById('expenses-page');
+    const expenseTableBody = document.getElementById('expenses-table');
+    const totalAmountCell = document.getElementById('total-amount');
+    const addExpenseButton = document.getElementById('add-expense');
+    const viewTotalButton = document.getElementById('view-total');
+    const viewTotalExpensesButton = document.getElementById('view-total-expenses');
+    const deleteDataButton = document.getElementById('delete-data');
+    const expensesSummary = document.getElementById('expenses-summary');
+    const saveDataButton = document.getElementById('save-data');
+
+    let expenses = [];
+    let selectedDate = '';
+
+    nextButton.addEventListener('click', () => {
+      selectedDate = document.getElementById('expense-date').value;
+      if (!selectedDate) {
+        alert('Please select a date.');
+        return;
+      }
+      datePage.style.display = 'none';
+      expensesPage.style.display = 'block';
+    });
+
+    addExpenseButton.addEventListener('click', () => {
+      const item = document.getElementById('expense-item').value;
+      const amount = parseFloat(document.getElementById('expense-amount').value);
+      if (!item || isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid item and amount.');
+        return;
+      }
+      expenses.push({ date: formatDate(selectedDate), item, amount });
+      addExpenseRow(item, amount);
+      document.getElementById('expense-item').value = '';
+      document.getElementById('expense-amount').value = '';
+    });
+
+    function formatDate(date) {
+      const [year, month, day] = date.split('-');
+      return `${day}-${month}-${year}`;
+    }
+
+    function addExpenseRow(item, amount) {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${item}</td><td>${amount}</td>`;
+      expenseTableBody.appendChild(row);
+    }
+
+    viewTotalButton.addEventListener('click', () => {
+      const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+      totalAmountCell.textContent = total;
+    });
+
+    viewTotalExpensesButton.addEventListener('click', () => {
+      expensesSummary.innerHTML = '';
+      expensesSummary.style.display = 'block';
+      const summaryTable = document.createElement('table');
+      summaryTable.innerHTML = `<thead><tr><th>Date</th><th>Item/Purpose</th><th>Total Amount (₹)</th></tr></thead>`;
+      const tbody = document.createElement('tbody');
+
+      const dateExpenseMap = {};
+      expenses.forEach(expense => {
+        if (!dateExpenseMap[expense.date]) {
+          dateExpenseMap[expense.date] = { total: 0, items: [] };
+        }
+        dateExpenseMap[expense.date].total += expense.amount;
+        dateExpenseMap[expense.date].items.push(expense.item);
+      });
+
+      for (const [date, data] of Object.entries(dateExpenseMap)) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${date}</td><td>${data.items.join(', ')}</td><td>${data.total}</td>`;
+        tbody.appendChild(row);
+      }
+
+      summaryTable.appendChild(tbody);
+      expensesSummary.appendChild(summaryTable);
+
+      addDownloadButton(summaryTable);
+    });
+
+    function addDownloadButton(table) {
+      const button = document.createElement('button');
+      button.textContent = 'Download Expenses';
+      button.style.marginTop = '15px';
+      expensesSummary.appendChild(button);
+
+      button.addEventListener('click', () => {
+        let csvContent = "Date,Item/Purpose,Total Amount\n";
+        table.querySelectorAll('tbody tr').forEach(row => {
+          const cells = row.querySelectorAll('td');
+          csvContent += `${cells[0].textContent},${cells[1].textContent},${cells[2].textContent}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'Expenses.csv';
+        link.click();
+      });
+    }
+
+    deleteDataButton.addEventListener('click', () => {
+      if (confirm('Are you sure you want to delete all expenses data?')) {
+        expenses = [];
+        expenseTableBody.innerHTML = '';
+        totalAmountCell.textContent = '0';
+        expensesSummary.style.display = 'none';
+        localStorage.removeItem('savedExpenses');
+        alert('All expenses data has been deleted.');
+      }
+    });
+
+    saveDataButton.addEventListener('click', () => {
+      if (expenses.length === 0) {
+        alert('No data available to save.');
+        return;
+      }
+      localStorage.setItem('savedExpenses', JSON.stringify(expenses));
+      alert('Data saved successfully!');
+    });
+
+    window.addEventListener('load', () => {
+      const savedExpenses = localStorage.getItem('savedExpenses');
+      if (savedExpenses) {
+        expenses = JSON.parse(savedExpenses);
+        expenses.forEach(expense => {
+          addExpenseRow(expense.item, expense.amount);
+        });
+        viewTotalButton.click(); // Display the current total on page load
+      }
+    });
+  </script>
+</body>
+</html>
